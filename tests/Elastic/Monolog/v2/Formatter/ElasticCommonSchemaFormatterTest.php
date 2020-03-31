@@ -293,4 +293,39 @@ class ElasticCommonSchemaFormatterTest extends BaseTestCase
             $this->assertArrayHasKey($keySanitized, $decoded['labels'], $keySanitized);
         }
     }
+
+    public function testSanitizeOfNonStringLabelKeys()
+    {
+        $msg = [
+            'level'      => Logger::NOTICE,
+            'level_name' => 'NOTICE',
+            'channel'    => 'ecs',
+            'datetime'   => new \DateTimeImmutable("@0"),
+            'message'    => md5(uniqid()),
+            'context'    => [
+                'sim_ple',
+                'lpad',
+                'rpad',
+                'foo_bar',
+                'a_b_c',
+                '_hello',
+                'lorem_',
+                'st_ar',
+                'sla_sh',
+                'a_b_c_d',
+            ],
+            'extra'      => [],
+        ];
+
+        $formatter = new ElasticCommonSchemaFormatter();
+        $doc = $formatter->format($msg);
+        $decoded = json_decode($doc, true);
+
+        $this->assertArrayHasKey('labels', $decoded);
+        foreach ($msg['context'] as $keyPrevious => $keySanitized) {
+            $keySanitized = "index_$keyPrevious";
+            $this->assertArrayNotHasKey($keyPrevious, $decoded['labels'], (string)$keyPrevious);
+            $this->assertArrayHasKey($keySanitized, $decoded['labels'], $keySanitized);
+        }
+    }
 }
